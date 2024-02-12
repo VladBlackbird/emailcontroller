@@ -6,6 +6,26 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Load API keys from .env file
 source $BASE_DIR/.env
 
+# Create a temporary .fetchmailrc file
+echo "poll $SERVER protocol IMAP user $USER password $PASSWORD" > $BASE_DIR/.fetchmailrc
+
+# Set the permissions of the .fetchmailrc file to 600
+chmod 600 $BASE_DIR/.fetchmailrc
+trap 'rm -f $BASE_DIR/.fetchmailrc' EXIT
+
+# Check if mail and fetchmail commands are installed
+if ! command -v mail &> /dev/null
+then
+    echo "The 'mail' command could not be found. Please install it by running 'sudo apt-get install mailutils'"
+    exit
+fi
+
+if ! command -v fetchmail &> /dev/null
+then
+    echo "The 'fetchmail' command could not be found. Please install it by running 'sudo apt-get install fetchmail'"
+    exit
+fi
+
 # Define usage function
 usage() {
   echo "This script is used to fetch emails and send emails. It accepts the following options and arguments:"
@@ -23,19 +43,53 @@ usage() {
   echo "  from: This argument is used to specify the sender's email address."
   echo ""
   echo "If no arguments are provided, the script will prompt for them."
+  echo ""
+  echo "To read your emails, you can use the 'mail' command. For example, 'mail -N' will show new emails, 'mail -r' will read all emails."
+  echo "You can also use 'mail -d' to delete emails. For example, 'mail -d 1' will delete the first email."
+  echo "To configure your mail settings, you can edit the '.fetchmailrc' file in your home directory."
+  echo "For example, you can specify the mail server, user, and password like this:"
+  echo "poll mail.example.com protocol IMAP user 'yourusername' password 'yourpassword'"
   exit 1
+}
+
+# Function to validate email
+validate_email() {
+  if [[ $1 =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]
+  then
+    return 0
+  else
+    echo "Invalid email format. Please input a correct format of email."
+    return 1
+  fi
+}
+
+# Function to fetch and read emails
+fetch_and_read_emails() {
+  # Fetch emails
+  fetchmail -f $BASE_DIR/.fetchmailrc -s
+  # Check if a new email was fetched
+  if [ $? -eq 0 ]; then
+    echo "A new email has been fetched."
+  fi
+  # Get the username of the user that launched the script
+  local username=$(whoami)
+  # Read the last email
+  echo "The last email received is:"
+  tail -n 1 /var/mail/$username
+  # Ask the user if they want to search for an email with a particular keyword
+  read -p "Do you want to search for an email with a particular keyword? (yes/no): " answer
+  if [[ $answer == "yes" ]]; then
+    read -p "Enter the keyword: " keyword
+    grep -i $keyword /var/mail/$username
+  fi
 }
 
 # Parse command line options
 while getopts ":fh" opt; do
   case ${opt} in
     f)
-      # Fetch emails
-      fetchmail -s -u "${USER}" -p IMAP --password "${PASSWORD}" "${SERVER}"
-      # Check if a new email was fetched
-      if [ $? -eq 0 ]; then
-        echo "A new email has been fetched."
-      fi
+      # Fetch and read emails
+      fetch_and_read_emails
       exit 0
       ;;
     h)
@@ -53,9 +107,17 @@ shift $((OPTIND -1))
 # Check if the required arguments are provided
 if [ $# -ne 4 ]; then
   read -p "To: " TO
+  while ! validate_email $TO
+  do
+    read -p "To: " TO
+  done
   read -p "Subject: " SUBJECT
   read -p "Body: " BODY
   read -p "From: " FROM
+  while ! validate_email $FROM
+  do
+    read -p "From: " FROM
+  done
 else
   TO=$1
   SUBJECT=$2
@@ -65,3 +127,6 @@ fi
 
 # Send email
 echo "${BODY}" | mail -s "${SUBJECT}" -r "${FROM}" "${TO}"
+
+# Delete the temporary .fetchmailrc file
+rm $BASE_DIR/.fetchmailrc
