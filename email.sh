@@ -3,26 +3,41 @@
 # Determine the script's directory
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Check if .env file exists
+if [ ! -f "$BASE_DIR/.env" ]; then
+    printf "Error: .env file not found.\n"
+    exit 1
+fi
+
 # Load API keys from .env file
 source $BASE_DIR/.env
 
+# Check if the required environment variables are set
+if [ -z "$SERVER" ] || [ -z "$USER" ] || [ -z "$PASSWORD" ]; then
+    printf "Error: Required environment variables are not set.\n"
+    exit 1
+fi
+
 # Create a temporary .fetchmailrc file
-echo "poll $SERVER protocol IMAP user $USER password $PASSWORD" > $BASE_DIR/.fetchmailrc
+FETCHMAILRC=$(mktemp)
+printf "poll $SERVER protocol IMAP user $USER password $PASSWORD" > $FETCHMAILRC
 
 # Set the permissions of the .fetchmailrc file to 600
-chmod 600 $BASE_DIR/.fetchmailrc
-trap 'rm -f $BASE_DIR/.fetchmailrc' EXIT
+chmod 600 $FETCHMAILRC
 
-# Check if mail and fetchmail commands are installed
-if ! command -v mail &> /dev/null
+# Ensure that the .fetchmailrc file is deleted when the script exits
+trap 'rm -f $FETCHMAILRC' EXIT
+
+# Check if mailx and fetchmail commands are installed
+if ! command -v mailx &> /dev/null
 then
-    echo "The 'mail' command could not be found. Please install it by running 'sudo apt-get install mailutils'"
+    printf "The 'mailx' command could not be found. Please install it by running 'sudo apt-get install mailutils'\n"
     exit
 fi
 
 if ! command -v fetchmail &> /dev/null
 then
-    echo "The 'fetchmail' command could not be found. Please install it by running 'sudo apt-get install fetchmail'"
+    printf "The 'fetchmail' command could not be found. Please install it by running 'sudo apt-get install fetchmail'\n"
     exit
 fi
 
