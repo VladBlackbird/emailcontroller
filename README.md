@@ -25,7 +25,7 @@ sudo apt-get install fetchmail
 Clone the repository to your local machine:
 
 ```
-git clone https://github.com/ETFrocks/emailcontroller.git
+git clone https://github.com/VladBlackbird/emailcontroller.git
 ```
 
 Navigate to the project directory:
@@ -79,7 +79,7 @@ If the `to`, `subject`, `body`, and `from` arguments are not provided, the scrip
 
 ## Authors
 
-* **Vlad BlackBird** - *Initial work* - [ETFrocks](https://github.com/VladBlackbird)
+* **Vlad BlackBird** - *Initial work* - [ScoobiDoge](https://github.com/VladBlackbird)
 
 ## License
 
