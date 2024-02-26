@@ -143,5 +143,5 @@ fi
 # Send email
 echo "${BODY}" | mail -s "${SUBJECT}" -r "${FROM}" "${TO}"
 
-# Delete the temporary .fetchmailrc file
-rm $BASE_DIR/.fetchmailrc
+# Ensure that the temporary .fetchmailrc file is deleted when the script exits
+trap 'rm -f $FETCHMAILRC' EXIT
