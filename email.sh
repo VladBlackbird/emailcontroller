@@ -81,7 +81,7 @@ validate_email() {
 # Function to fetch and read emails
 fetch_and_read_emails() {
   # Fetch emails
-  fetchmail -f $BASE_DIR/.fetchmailrc -s
+  fetchmail -f $FETCHMAILRC -s
   # Check if a new email was fetched
   if [ $? -eq 0 ]; then
     echo "A new email has been fetched."
@@ -142,6 +142,3 @@ fi
 
 # Send email
 echo "${BODY}" | mail -s "${SUBJECT}" -r "${FROM}" "${TO}"
-
-# Ensure that the temporary .fetchmailrc file is deleted when the script exits
-trap 'rm -f $FETCHMAILRC' EXIT
